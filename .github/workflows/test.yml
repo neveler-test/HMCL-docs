@@ -28,7 +28,7 @@ jobs:
         with:
           script: |
             const { owner, repo } = context.repo;
-            const pages = (await octokit.rest.repos.getPages({ owner, repo })).data;
+            const pages = (await github.rest.repos.getPages({ owner, repo })).data;
             const domain = pages.cname || `${owner.toLowerCase()}.github.io`;
             core.setOutput('domain', domain);
             core.setOutput('pathname', (pages.cname || repo.toLowerCase() === domain) ? '' : `/${repo}`);
