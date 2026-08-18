@@ -16,7 +16,7 @@ env:
   JEKYLL_ENV: production
   PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
   PREVIEW_DOMAIN: ${{ github.repository_owner }}.github.io
-  PREVIEW_PATHNAME: ${{ github.event.repository.name == format('{0}.github.io', github.repository_owner) && '' || format('/{0}', github.event.repository.name) }}
+  PREVIEW_PATHNAME: ${{ github.event.repository.name != format('{0}.github.io', github.repository_owner) && format('/{0}', github.event.repository.name) || '' }}
 
 jobs:
   preview:
