@@ -15,8 +15,8 @@ concurrency:
 env:
   JEKYLL_ENV: production
   PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
-  PREVIEW_DOMAIN: neveler-test.github.io
-  PREVIEW_PATHNAME: /HMCL-docs
+  PREVIEW_DOMAIN: ${{ github.repository_owner }}.github.io
+  PREVIEW_PATHNAME: ${{ github.event.repository.name == format('{0}.github.io', github.repository_owner) && '' || format('/{0}', github.event.repository.name) }}
 
 jobs:
   preview:
@@ -28,18 +28,20 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.4"
-      - name: Jekyll Build
+      - name: Build
         run: |
-          echo "url: https://${{ env.PREVIEW_DOMAIN }}" > _action.yml
-          echo "baseurl: ${{ env.PREVIEW_PATHNAME }}/PR${{ env.PULL_REQUEST_NUMBER }}" >> _action.yml
-          echo "source: ${{ github.workspace }}" >> _action.yml
-          echo "destination: /home/runner/site" >> _action.yml
-          echo "preview:" >> _action.yml
-          echo "  pr-number: ${{ env.PULL_REQUEST_NUMBER }}" >> _action.yml
+          cat <<EOF > /home/runner/_action.yml
+          url: https://${{ env.PREVIEW_DOMAIN }}
+          baseurl: ${{ env.PREVIEW_PATHNAME }}/PR${{ env.PULL_REQUEST_NUMBER }}
+          source: ${{ github.workspace }}
+          destination: /home/runner/site
+          preview:
+            pr-number: ${{ env.PULL_REQUEST_NUMBER }}
+          EOF
           bundle install --jobs 4
-          bundle exec jekyll build --trace --config _config.yml,_action.yml
+          bundle exec jekyll build --trace --config _config.yml,/home/runner/_action.yml
       - name: Upload Artifact
         uses: actions/upload-artifact@v7
         with:
-          name: site
+          name: artifact
           path: /home/runner/site
