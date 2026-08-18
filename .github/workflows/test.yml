@@ -15,31 +15,23 @@ concurrency:
 env:
   JEKYLL_ENV: production
   PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+  PREVIEW_DOMAIN: neveler-test.github.io
+  PREVIEW_PATHNAME: /HMCL-docs
 
 jobs:
   preview:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
-      - id: init
-        name: Init
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const { owner, repo } = context.repo;
-            const pages = (await github.rest.repos.getPages({ owner, repo })).data;
-            const domain = pages.cname || `${owner.toLowerCase()}.github.io`;
-            core.setOutput('domain', domain);
-            core.setOutput('pathname', (pages.cname || repo.toLowerCase() === domain) ? '' : `/${repo}`);
+        uses: actions/checkout@v7
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.4"
       - name: Jekyll Build
         run: |
-          echo "url: https://${{ steps.init.outputs.domain }}" > _action.yml
-          echo "baseurl: ${{ steps.init.outputs.pathname }}/PR${{ env.PULL_REQUEST_NUMBER }}" >> _action.yml
+          echo "url: https://${{ env.PREVIEW_DOMAIN }}" > _action.yml
+          echo "baseurl: ${{ env.PREVIEW_PATHNAME }}/PR${{ env.PULL_REQUEST_NUMBER }}" >> _action.yml
           echo "source: ${{ github.workspace }}" >> _action.yml
           echo "destination: /home/runner/site" >> _action.yml
           echo "preview:" >> _action.yml
