@@ -145,7 +145,7 @@ jobs:
             core.exportVariable('PULL_REQUEST_NUMBER', PULL_REQUEST_NUMBER);
 
             const { value: LAST_PR_PREVIEW_RUN_ID } = await github.rest.actions.getRepoVariable({ owner, repo, name: "LAST_PR_PREVIEW_RUN_ID" });
-            core.exportVariable('LAST_PR_PREVIEW_RUN_ID', );
+            core.exportVariable('LAST_PR_PREVIEW_RUN_ID', LAST_PR_PREVIEW_RUN_ID);
       - if: ${{ env.LAST_PR_PREVIEW_RUN_ID != '' }}
         name: Download Pages
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
