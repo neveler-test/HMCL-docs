@@ -204,23 +204,3 @@ jobs:
               repo: context.repo.repo,
               key: "${{ steps.restore-pages.outputs.cache-matched-key }}"
             });
-      - if: ${{ steps.upload-pages.outputs.artifact_id }}
-        name: Remove Pages Artifact
-        uses: actions/github-script@v8
-        with:
-          script: |
-            github.rest.actions.deleteArtifact({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              artifact_id: "${{ steps.upload-pages.outputs.artifact_id }}",
-            });
-      - if: ${{ needs.preview-create-build.outputs.artifact-id }}
-        name: Remove Temp Artifact
-        uses: actions/github-script@v8
-        with:
-          script: |
-            github.rest.actions.deleteArtifact({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              artifact_id: "${{ needs.preview-create-build.outputs.artifact-id }}"
-            });
