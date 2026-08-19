@@ -21,6 +21,9 @@ jobs:
   pr-preview-build:
     if: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
+    env:
+      SITE_ARTFACT_PATH: ${{ runner.temp }}/site
+      PULL_REQUEST_NUMBER_PATH: ${{ runner.temp }}/PULL_REQUEST_NUMBER
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -28,13 +31,14 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.4"
-      - name: Build
+      - name: Build Artifact
         run: |
+          echo "${{ env.PULL_REQUEST_NUMBER }}" > "${{ env.PULL_REQUEST_NUMBER_PATH }}"
           cat <<EOF > /home/runner/_action.yml
           url: "https://${{ env.PREVIEW_DOMAIN }}"
           baseurl: "${{ env.PREVIEW_PATHNAME }}/PR${{ env.PULL_REQUEST_NUMBER }}"
           source: "${{ github.workspace }}"
-          destination: "${{ runner.temp }}/artifact"
+          destination: "${{ env.SITE_ARTFACT_PATH }}"
           preview:
             pr-number: "${{ env.PULL_REQUEST_NUMBER }}"
           EOF
@@ -44,4 +48,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: artifact
-          path: ${{ runner.temp }}/artifact
+          path: |
+            ${{ env.SITE_ARTFACT_PATH }}
+            ${{ env.PULL_REQUEST_NUMBER_PATH }}
