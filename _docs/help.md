@@ -6,6 +6,8 @@ author: zkitefly
 
 test
 
+test
+
 ## QQ 群聊
 
 Hello Minecraft! Launcher 的官方 QQ 群聊。
