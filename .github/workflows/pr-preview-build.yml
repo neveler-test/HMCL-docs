@@ -1,0 +1,47 @@
+name: PR Preview Build
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+concurrency:
+  group: pr-preview
+  cancel-in-progress: false
+
+env:
+  JEKYLL_ENV: production
+  PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+  PREVIEW_DOMAIN: ${{ github.repository_owner }}.github.io
+  PREVIEW_PATHNAME: ${{ github.event.repository.name != format('{0}.github.io', github.repository_owner) && format('/{0}', github.event.repository.name) || '' }}
+
+jobs:
+  pr-preview-build:
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+      - name: Build
+        run: |
+          cat <<EOF > /home/runner/_action.yml
+          url: "https://${{ env.PREVIEW_DOMAIN }}"
+          baseurl: "${{ env.PREVIEW_PATHNAME }}/PR${{ env.PULL_REQUEST_NUMBER }}"
+          source: "${{ github.workspace }}"
+          destination: "${{ runner.temp }}/artifact"
+          preview:
+            pr-number: "${{ env.PULL_REQUEST_NUMBER }}"
+          EOF
+          bundle install --jobs 4
+          bundle exec jekyll build --trace --config _config.yml,/home/runner/_action.yml
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: artifact
+          path: ${{ runner.temp }}/artifact
