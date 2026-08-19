@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Cache Refresh
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v4
         with:
           key: pages-${{ github.run_id }}
           path: ${{ runner.temp }}/pages
@@ -39,7 +39,7 @@ jobs:
     steps:
       - id: restore-pages
         name: Restore Pages
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v4
         with:
           key: pages-${{ github.run_id }}
           path: ${{ runner.temp }}/pages
@@ -58,7 +58,7 @@ jobs:
           done
           echo "[$(date)] Remove Preview PR${{ env.PULL_REQUEST_NUMBER }}" > ${{ runner.temp }}/pages/index.html
       - name: Save Pages
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v4
         with:
           key: pages-${{ github.run_id }}
           path: ${{ runner.temp }}/pages
@@ -145,7 +145,7 @@ jobs:
             core.exportVariable('PULL_REQUEST_NUMBER', PULL_REQUEST_NUMBER);
       - id: restore-pages
         name: Restore Pages
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v4
         with:
           key: pages-${{ github.run_id }}
           path: ${{ runner.temp }}/pages
@@ -190,7 +190,7 @@ jobs:
         with:
           artifact_name: github-pages
       - name: Save Pages
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v4
         with:
           key: pages-${{ github.run_id }}
           path: ${{ runner.temp }}/pages
