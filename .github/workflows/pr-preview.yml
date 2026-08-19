@@ -4,9 +4,11 @@ on:
   schedule:
     - cron: 0 0 */6 * *
   pull_request_target:
-    types: [closed]
+    types:
+      - closed
   workflow_run:
-    workflows: ["PR Preview Build"]
+    workflows:
+      - "PR Preview Build"
     types:
       - completed
 
@@ -16,7 +18,7 @@ concurrency:
 
 jobs:
   pr-preview-cache-refresh:
-    if: ${{ github.event_name == 'schedule' && github.event.schedule == '0 0 */6 * *' }}
+    if: ${{ github.event_name == 'schedule' }}
     runs-on: ubuntu-latest
     steps:
       - name: Cache Refresh
@@ -26,7 +28,7 @@ jobs:
           path: ${{ runner.temp }}/pages
           restore-keys: pages-
   pr-preview-remove:
-    if: ${{ github.event_name == 'pull_request_target' && github.event.action == 'closed' }}
+    if: ${{ github.event_name == 'pull_request_target'}}
     runs-on: ubuntu-latest
     permissions:
       actions: write
@@ -173,41 +175,4 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               artifact_id: "${{ needs.preview-create-build.outputs.artifact-id }}"
-            });
-  pr-preview-deploy-comment:
-    if: ${{ always() && needs.preview-create-init.result == 'success' }}
-    needs: [preview-create-init, preview-create-deploy]
-    runs-on: ubuntu-latest
-    permissions:
-      checks: write
-      pull-requests: write
-    steps:
-      - if: ${{ github.event_name == 'issue_comment' }}
-        id: comment-message
-        name: Comment Message (issue_comment)
-        env:
-          PREVIEW_URL: https://${{ needs.preview-create-init.outputs.domain }}${{ needs.preview-create-init.outputs.pathname }}/PR${{ env.PULL_REQUEST_NUMBER }}
-        continue-on-error: true
-        uses: actions/github-script@v8
-        with:
-          script: |
-            github.rest.issues.updateComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              comment_id: context.payload.comment.id,
-              issue_number: context.issue.number,
-              body: "${{ needs.preview-create-deploy.result == 'success' && format('[Preview] {0}', env.PREVIEW_URL) || '[Preview] Failed, see logs for more information.' }}"
-            });
-      - if: ${{ steps.comment-message.outcome == 'failure' }}
-        name: Comment Message
-        env:
-          PREVIEW_URL: https://${{ needs.preview-create-init.outputs.domain }}${{ needs.preview-create-init.outputs.pathname }}/PR${{ env.PULL_REQUEST_NUMBER }}
-        uses: actions/github-script@v8
-        with:
-          script: |
-            github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: "${{ needs.preview-create-deploy.result == 'success' && format('[Preview] {0}', env.PREVIEW_URL) || '[Preview] Failed, see logs for more information.' }}"
             });
