@@ -35,7 +35,6 @@ jobs:
       contents: write
       pull-requests: write
     env:
-      PAGES_PATH: ${{ runner.temp }}/pages
       PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
     steps:
       - id: restore-pages
@@ -43,26 +42,26 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           key: pages-${{ github.run_id }}
-          path: ${{ env.PAGES_PATH }}
+          path: ${{ runner.temp }}/pages
           restore-keys: pages-
       - name: Prepare Pages
         run: |
-          mkdir -p ${{ env.PAGES_PATH }}/data/{files,refs}
-          rm -rf ${{ env.PAGES_PATH }}/PR${{ env.PULL_REQUEST_NUMBER }}
-          grep -rlw 'PR${{ env.PULL_REQUEST_NUMBER }}' ${{ env.PAGES_PATH }}/data/refs | xargs -r sed -i '/\<PR${{ env.PULL_REQUEST_NUMBER }}\>/d'
-          for ref in ${{ env.PAGES_PATH }}/data/refs/*; do
+          mkdir -p ${{ runner.temp }}/pages/data/{files,refs}
+          rm -rf ${{ runner.temp }}/pages/PR${{ env.PULL_REQUEST_NUMBER }}
+          grep -rlw 'PR${{ env.PULL_REQUEST_NUMBER }}' ${{ runner.temp }}/pages/data/refs | xargs -r sed -i '/\<PR${{ env.PULL_REQUEST_NUMBER }}\>/d'
+          for ref in ${{ runner.temp }}/pages/data/refs/*; do
             if [ ! -s "$ref" ]; then
               base=$(basename "$ref")
-              rm -f "${{ env.PAGES_PATH }}/data/files/$base"
+              rm -f "${{ runner.temp }}/pages/data/files/$base"
               rm -f "$ref"
             fi
           done
-          echo "[$(date)] Remove Preview PR${{ env.PULL_REQUEST_NUMBER }}" > ${{ env.PAGES_PATH }}/index.html
+          echo "[$(date)] Remove Preview PR${{ env.PULL_REQUEST_NUMBER }}" > ${{ runner.temp }}/pages/index.html
       - name: Save Pages
         uses: actions/cache/save@v6
         with:
           key: pages-${{ github.run_id }}
-          path: ${{ env.PAGES_PATH }}
+          path: ${{ runner.temp }}/pages
       - if: ${{ steps.restore-pages.outputs.cache-matched-key }}
         name: Remove History Cache
         uses: actions/github-script@v9
@@ -85,7 +84,6 @@ jobs:
       id-token: write
       contents: write
     env:
-      PAGES_PATH: ${{ runner.temp }}/pages
       PREVIEW_DOMAIN: ${{ github.repository_owner }}.github.io
       PREVIEW_PATHNAME: ${{ github.event.repository.name != format('{0}.github.io', github.repository_owner) && format('/{0}', github.event.repository.name) || '' }}
     steps:
@@ -94,49 +92,49 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           key: pages-${{ github.run_id }}
-          path: ${{ env.PAGES_PATH }}
+          path: ${{ runner.temp }}/pages
           restore-keys: pages-
       - name: Merge Site Before
         run: |
-          mkdir -p ${{ env.PAGES_PATH }}/data/{files,refs}
-          rm -rf ${{ env.PAGES_PATH }}/PR${{ env.PULL_REQUEST_NUMBER }}
-          grep -rlw 'PR${{ env.PULL_REQUEST_NUMBER }}' ${{ env.PAGES_PATH }}/data/refs | xargs -r sed -i '/\<PR${{ env.PULL_REQUEST_NUMBER }}\>/d'
+          mkdir -p ${{ runner.temp }}/pages/data/{files,refs}
+          rm -rf ${{ runner.temp }}/pages/PR${{ env.PULL_REQUEST_NUMBER }}
+          grep -rlw 'PR${{ env.PULL_REQUEST_NUMBER }}' ${{ runner.temp }}/pages/data/refs | xargs -r sed -i '/\<PR${{ env.PULL_REQUEST_NUMBER }}\>/d'
       - name: Merge Site
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: artifact
-          path: ${{ env.PAGES_PATH }}/PR${{ env.PULL_REQUEST_NUMBER }}
+          path: ${{ runner.temp }}/pages/PR${{ env.PULL_REQUEST_NUMBER }}
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Merge Site After
         run: |
-          find ${{ env.PAGES_PATH }}/PR${{ env.PULL_REQUEST_NUMBER }} -type f | while read file; do
+          find ${{ runner.temp }}/pages/PR${{ env.PULL_REQUEST_NUMBER }} -type f | while read file; do
             hash=$(sha256sum "$file" | cut -d' ' -f1)
             size=$(stat -c%s "$file")
             key="${hash}-${size}"
-            target="${{ env.PAGES_PATH }}/data/files/$key"
+            target="${{ runner.temp }}/pages/data/files/$key"
             if [ ! -f "$target" ]; then
               mv "$file" "$target"
             else
               rm -f "$file"
             fi
             ln -s "$(realpath --relative-to="$(dirname "$file")" "$target")" "$file"
-            echo "PR${{ env.PULL_REQUEST_NUMBER }}" >> "${{ env.PAGES_PATH }}/data/refs/$key"
+            echo "PR${{ env.PULL_REQUEST_NUMBER }}" >> "${{ runner.temp }}/pages/data/refs/$key"
           done
-          for ref in ${{ env.PAGES_PATH }}/data/refs/*; do
+          for ref in ${{ runner.temp }}/pages/data/refs/*; do
             if [ ! -s "$ref" ]; then
               base=$(basename "$ref")
-              rm -f "${{ env.PAGES_PATH }}/data/files/$base"
+              rm -f "${{ runner.temp }}/pages/data/files/$base"
               rm -f "$ref"
             fi
           done
-          echo "[$(date)] Preview PR${{ env.PULL_REQUEST_NUMBER }}" > ${{ env.PAGES_PATH }}/index.html
+          echo "[$(date)] Preview PR${{ env.PULL_REQUEST_NUMBER }}" > ${{ runner.temp }}/pages/index.html
       - id: upload-pages
         name: Upload Pages
         uses: actions/upload-pages-artifact@v4
         with:
           name: github-pages
-          path: ${{ env.PAGES_PATH }}
+          path: ${{ runner.temp }}/pages
       - name: Deploy Pages
         uses: actions/deploy-pages@v4
         with:
@@ -145,7 +143,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           key: pages-${{ github.run_id }}
-          path: ${{ env.PAGES_PATH }}
+          path: ${{ runner.temp }}/pages
       - if: ${{ steps.restore-pages.outputs.cache-matched-key }}
         name: Remove History Cache
         uses: actions/github-script@v8
