@@ -79,8 +79,8 @@ jobs:
       name: github-pages
       url: https://${{ env.PREVIEW_DOMAIN }}${{ env.PREVIEW_PATHNAME }}/PR${{ env.PULL_REQUEST_NUMBER }}
     permissions:
-      actions: write
       pages: write
+      actions: write
       id-token: write
       contents: write
     env:
@@ -143,20 +143,28 @@ jobs:
             }
 
             core.exportVariable('PULL_REQUEST_NUMBER', PULL_REQUEST_NUMBER);
-      - id: restore-pages
-        name: Restore Pages
-        uses: actions/cache/restore@v4
+
+            const { value: LAST_PR_PREVIEW_RUN_ID } = await github.rest.actions.getRepoVariable({ owner, repo, name: "LAST_PR_PREVIEW_RUN_ID" });
+            core.exportVariable('LAST_PR_PREVIEW_RUN_ID', LAST_PR_PREVIEW_RUN_ID ?? "");
+      - if: ${{ env.LAST_PR_PREVIEW_RUN_ID != "" }}
+        name: Download Pages
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          key: pages-${{ github.run_id }}
-          path: ${{ runner.temp }}/pages
-          restore-keys: pages-
+          name: github-pages
+          path: ${{ runner.temp }}/github-pages
+          run-id: ${{ env.LAST_PR_PREVIEW_RUN_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Merge Site
         run: |
+          ls ${{ runner.temp }}/github-pages
+          if [ -f "${{ runner.temp }}/github-pages/artifact.tar" ]; then
+            tar -xvf "${{ runner.temp }}/github-pages/artifact.tar" -C "${{ runner.temp }}/pages"
+            ls "${{ runner.temp }}/pages"
+          fi
+
           mkdir -p ${{ runner.temp }}/pages/data/{files,refs}
           rm -rf ${{ runner.temp }}/pages/PR${{ env.PULL_REQUEST_NUMBER }}
           grep -rlw 'PR${{ env.PULL_REQUEST_NUMBER }}' ${{ runner.temp }}/pages/data/refs | xargs -r sed -i '/\<PR${{ env.PULL_REQUEST_NUMBER }}\>/d'
-
-          mv "${{ runner.temp }}/artifact/site" "${{ runner.temp }}/pages/PR${{ env.PULL_REQUEST_NUMBER }}"
 
           find ${{ runner.temp }}/pages/PR${{ env.PULL_REQUEST_NUMBER }} -type f | while read file; do
             hash=$(sha256sum "$file" | cut -d' ' -f1)
@@ -189,18 +197,15 @@ jobs:
         uses: actions/deploy-pages@v4
         with:
           artifact_name: github-pages
-      - name: Save Pages
-        uses: actions/cache/save@v4
-        with:
-          key: pages-${{ github.run_id }}
-          path: ${{ runner.temp }}/pages
-      - if: ${{ steps.restore-pages.outputs.cache-matched-key }}
-        name: Remove History Cache
-        uses: actions/github-script@v8
+      - name: Update LAST_PR_PREVIEW_RUN_ID
+        uses: actions/github-script@v9
         with:
           script: |
-            github.rest.actions.deleteActionsCacheByKey({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              key: "${{ steps.restore-pages.outputs.cache-matched-key }}"
+            const { owner, repo } = context.repo;
+            const LAST_PR_PREVIEW_RUN_ID = process.env.LAST_PR_PREVIEW_RUN_ID;
+            await github.rest.actions[LAST_PR_PREVIEW_RUN_ID === "" ? "createRepoVariable" : "updateRepoVariable"]({
+              owner,
+              repo,
+              name: "LAST_PR_PREVIEW_RUN_ID",
+              value: "${{ github.event.run_id }}"
             });
