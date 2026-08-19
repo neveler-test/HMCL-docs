@@ -101,7 +101,7 @@ jobs:
           PULL_REQUEST_NUMBER_PATH: ${{ runner.temp }}/artifact/PULL_REQUEST_NUMBER
         with:
           script: |
-            import fs from "fs";
+            const fs = require("fs");
 
             const prNumberPath = process.env.PULL_REQUEST_NUMBER_PATH;
             if (!prNumberPath || !fs.existsSync(prNumberPath) || !fs.statSync(prNumberPath).isFile()) {
