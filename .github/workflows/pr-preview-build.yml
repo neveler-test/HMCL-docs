@@ -14,8 +14,7 @@ concurrency:
 env:
   JEKYLL_ENV: production
   PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
-  PREVIEW_DOMAIN: ${{ github.repository_owner }}.github.io
-  PREVIEW_PATHNAME: ${{ github.event.repository.name != format('{0}.github.io', github.repository_owner) && format('/{0}', github.event.repository.name) || '' }}
+  PREVIEW_DOMAIN: "pr${{ github.event.pull_request.number }}.preview-hmcl-docs.pages.dev"
 
 jobs:
   pr-preview-build:
@@ -33,7 +32,6 @@ jobs:
           echo "${{ env.PULL_REQUEST_NUMBER }}" > "${{ runner.temp }}/PULL_REQUEST_NUMBER"
           cat <<EOF > /home/runner/_action.yml
           url: "https://${{ env.PREVIEW_DOMAIN }}"
-          baseurl: "${{ env.PREVIEW_PATHNAME }}/PR${{ env.PULL_REQUEST_NUMBER }}"
           source: "${{ github.workspace }}"
           destination: "${{ runner.temp }}/site"
           preview:

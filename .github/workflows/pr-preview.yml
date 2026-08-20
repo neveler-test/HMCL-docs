@@ -66,14 +66,6 @@ jobs:
   deploy:
     if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      actions: write
-      id-token: write
-      contents: write
-    env:
-      PREVIEW_DOMAIN: ${{ github.repository_owner }}.github.io
-      PREVIEW_PATHNAME: ${{ github.event.repository.name != format('{0}.github.io', github.repository_owner) && format('/{0}', github.event.repository.name) || '' }}
     steps:
       - name: Download Artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -135,5 +127,4 @@ jobs:
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          command: |
-            pages deploy "${{ runner.temp }}/artifact/site" --project-name="${{ env.CLOUDFLARE_PAGES_PROJECT_NAME }}" --branch="pr${{ env.PULL_REQUEST_NUMBER }}"
+          command: pages deploy "${{ runner.temp }}/artifact/site" --project-name="${{ env.CLOUDFLARE_PAGES_PROJECT_NAME }}" --branch="pr${{ env.PULL_REQUEST_NUMBER }}"
