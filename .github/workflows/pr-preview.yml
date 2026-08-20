@@ -22,59 +22,39 @@ jobs:
     if: ${{ github.event_name == 'pull_request_target'}}
     runs-on: ubuntu-latest
     permissions:
-      actions: write
-      contents: write
       pull-requests: write
     env:
       PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
     steps:
-      - id: restore-pages
-        name: Restore Pages
-        uses: actions/cache/restore@v4
-        with:
-          key: pages-${{ github.run_id }}
-          path: ${{ runner.temp }}/pages
-          restore-keys: pages-
-      - name: Prepare Pages
+      - name: Generate Removal Notice
         run: |
-          mkdir -p ${{ runner.temp }}/pages/data/{files,refs}
-          rm -rf ${{ runner.temp }}/pages/PR${{ env.PULL_REQUEST_NUMBER }}
-          grep -rlw 'PR${{ env.PULL_REQUEST_NUMBER }}' ${{ runner.temp }}/pages/data/refs | xargs -r sed -i '/\<PR${{ env.PULL_REQUEST_NUMBER }}\>/d'
-          for ref in ${{ runner.temp }}/pages/data/refs/*; do
-            if [ ! -s "$ref" ]; then
-              base=$(basename "$ref")
-              rm -f "${{ runner.temp }}/pages/data/files/$base"
-              rm -f "$ref"
-            fi
-          done
-          echo "[$(date)] Remove Preview PR${{ env.PULL_REQUEST_NUMBER }}" > ${{ runner.temp }}/pages/index.html
-      - name: Save Pages
-        uses: actions/cache/save@v4
+          echo "Preview already removed!" > index.html
+      - name: Deploy Pages
+        uses: cloudflare/wrangler-action@v4
         with:
-          key: pages-${{ github.run_id }}
-          path: ${{ runner.temp }}/pages
-      - if: ${{ steps.restore-pages.outputs.cache-matched-key }}
-        name: Remove History Cache
-        uses: actions/github-script@v9
-        with:
-          script: |
-            github.rest.actions.deleteActionsCacheByKey({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              key: "${{ steps.restore-pages.outputs.cache-matched-key }}"
-            });
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          command: |
+            pages deploy "." --project-name="${{ env.CLOUDFLARE_PAGES_PROJECT_NAME }}" --branch="pr${{ env.PULL_REQUEST_NUMBER }}" --no-bundle
+      - name: Upsert Removal Comment on PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment "${{ env.PULL_REQUEST_NUMBER }}" --body "Preview already removed!" --edit-last --create-if-none
+
   deploy:
     if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
     steps:
-      - name: Download Artifact
+      - name: Download Build Artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: artifact
           path: ${{ runner.temp }}/artifact
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Prepare
+      - name: Validate PR Context & Setup Environment
         uses: actions/github-script@v9
         env:
           SITE_PATH: ${{ runner.temp }}/artifact/site
@@ -123,8 +103,14 @@ jobs:
             }
 
             core.exportVariable('PULL_REQUEST_NUMBER', PULL_REQUEST_NUMBER);
-      - name: Deploy Pages
+      - name: Deploy Preview to Cloudflare Pages
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          command: pages deploy "${{ runner.temp }}/artifact/site" --project-name="${{ env.CLOUDFLARE_PAGES_PROJECT_NAME }}" --branch="pr${{ env.PULL_REQUEST_NUMBER }}"
+          command: |
+            pages deploy "${{ runner.temp }}/artifact/site" --project-name="${{ env.CLOUDFLARE_PAGES_PROJECT_NAME }}" --branch="pr${{ env.PULL_REQUEST_NUMBER }}" --no-bundle
+      - name: Upsert Preview URL Comment on PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment "${{ env.PULL_REQUEST_NUMBER }}" --body "Preview URL: https://${{ env.CLOUDFLARE_PAGES_PROJECT_NAME }}.pages.dev" --edit-last --create-if-none
