@@ -28,7 +28,7 @@ jobs:
     steps:
       - name: Generate Removal Notice
         run: |
-          echo "Preview already removed!" > index.html
+          echo "Preview already removed" > index.html
       - name: Deploy Pages
         uses: cloudflare/wrangler-action@v4
         with:
