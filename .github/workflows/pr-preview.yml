@@ -119,6 +119,6 @@ jobs:
         run: |
           gh pr comment "${{ env.PULL_REQUEST_NUMBER }}" \
             --repo "${{ github.repository }}" \
-            --body "Preview URL: https://${{ env.CLOUDFLARE_PAGES_PROJECT_NAME }}.pages.dev" \
+            --body "Preview URL: https://pr${{ env.PULL_REQUEST_NUMBER }}.${{ env.CLOUDFLARE_PAGES_PROJECT_NAME }}.pages.dev" \
             --edit-last \
             --create-if-none
