@@ -8,7 +8,7 @@ on:
       - synchronize
 
 concurrency:
-  group: pr-preview-build
+  group: pr-preview-build-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 env:
